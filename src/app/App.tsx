@@ -823,7 +823,12 @@ export function App() {
           value={nameBox ?? selLabel}
           onFocus={(e) => {
             setNameBox(selLabel);
-            requestAnimationFrame(() => e.target.select());
+            const input = e.target;
+            // Only if it still has focus: in WebKit, select() also focuses, which would steal the
+            // keyboard back from the grid if Enter was pressed before this frame.
+            requestAnimationFrame(() => {
+              if (document.activeElement === input) input.select();
+            });
           }}
           onChange={(e) => setNameBox(e.target.value)}
           onBlur={() => setNameBox(null)}
