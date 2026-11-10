@@ -8,6 +8,8 @@ Formula parser, dependency graph, incremental recalculation and a million-row gr
 
 ### [Try it live →](https://recalcbyluka.netlify.app/)
 
+[![CI](https://github.com/LukaLomadze1/recalc/actions/workflows/ci.yml/badge.svg)](https://github.com/LukaLomadze1/recalc/actions/workflows/ci.yml)
+
 ![Changing the interest rate in a mortgage sheet: 1,505 dependent formulas light up in the order the engine recomputed them](docs/screenshots/hero.gif)
 
 </div>
