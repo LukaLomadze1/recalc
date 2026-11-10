@@ -1,0 +1,51 @@
+{
+  "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
+  "node": "v24.13.0",
+  "runs": 7,
+  "rows": [
+    {
+      "what": "Mortgage: open and compute everything",
+      "recomputed": 1864,
+      "of": 1864,
+      "ms": 14.276399999999995
+    },
+    {
+      "what": "Mortgage: change the interest rate (B5)",
+      "recomputed": 1505,
+      "of": 1864,
+      "ms": 2.734999999999957
+    },
+    {
+      "what": "Mortgage: change a label (A1)",
+      "recomputed": 0,
+      "of": 1864,
+      "ms": 0.014000000000010004
+    },
+    {
+      "what": "Stress: open 300,000 cells (200,005 formulas)",
+      "recomputed": 200005,
+      "of": 200005,
+      "ms": 752.8524
+    },
+    {
+      "what": "Stress: change A1 (top of the 100,000-deep chain)",
+      "recomputed": 100006,
+      "of": 200005,
+      "ms": 145.09959999999955
+    },
+    {
+      "what": "Stress: change A99999 (near the bottom)",
+      "recomputed": 8,
+      "of": 200005,
+      "ms": 34.642400000000634
+    },
+    {
+      "what": "Stress: change an unrelated cell (H1)",
+      "recomputed": 0,
+      "of": 200005,
+      "ms": 0.04799999999886495
+    }
+  ],
+  "parsePerSecond": 515394,
+  "date": "2026-11-10"
+}

@@ -1,0 +1,48 @@
+{
+  "name": "recalc",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A spreadsheet engine written from scratch, with an X-ray mode that shows its dependency graph and incremental recalculation.",
+  "author": "Luka Lomadze",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "fuzz": "node --disable-warning=ExperimentalWarning scripts/fuzz.ts",
+    "bench": "node --disable-warning=ExperimentalWarning scripts/bench.ts",
+    "screenshots": "node --disable-warning=ExperimentalWarning scripts/screenshots.ts",
+    "gif": "node scripts/gif.mjs"
+  },
+  "dependencies": {
+    "@fontsource/instrument-sans": "^5.2.0",
+    "@fontsource/jetbrains-mono": "^5.2.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^26.6.6",
+    "@types/pngjs": "^6.0.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "eslint": "^10.14.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "gifenc": "^1.0.3",
+    "pngjs": "^7.0.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

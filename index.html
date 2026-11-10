@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Recalc: a spreadsheet engine with an X-ray</title>
+    <meta
+      name="description"
+      content="A spreadsheet engine written from scratch: formula parser, dependency graph, incremental recalculation and a million-row canvas grid, with an X-ray mode that shows the engine at work."
+    />
+    <meta name="theme-color" content="#f3f1ea" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#11100e" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://recalcbyluka.netlify.app/" />
+    <meta property="og:image" content="https://recalcbyluka.netlify.app/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="og:title" content="Recalc: a spreadsheet engine with an X-ray" />
+    <meta
+      property="og:description"
+      content="Change one cell and watch 1,900 formulas recompute in dependency order. Formula parser, dependency graph and incremental recalculation, written from scratch."
+    />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+  </head>
+  <body>
+    <noscript>Recalc is a spreadsheet that runs in your browser, so it needs JavaScript.</noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
