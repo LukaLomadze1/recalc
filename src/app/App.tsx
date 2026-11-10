@@ -94,6 +94,24 @@ export function App() {
   const live = useRef({ sel, editing, clip, xray });
   live.current = { sel, editing, clip, xray };
 
+  // Keyboard and pointer handlers read `live`, not the state variables, so they always see the latest
+  // values. These setters update `live` immediately instead of waiting for React to re-render: on a
+  // slow machine, a keystroke can arrive before the render that follows the previous one.
+  const setSelNow = useCallback((u: Selection | ((s: Selection) => Selection)) => {
+    const next = typeof u === 'function' ? u(live.current.sel) : u;
+    live.current.sel = next;
+    setSel(next);
+  }, []);
+  const setEditingNow = useCallback((u: Editing | null | ((e: Editing | null) => Editing | null)) => {
+    const next = typeof u === 'function' ? u(live.current.editing) : u;
+    live.current.editing = next;
+    setEditing(next);
+  }, []);
+  const setClipNow = useCallback((c: Clip | null) => {
+    live.current.clip = c;
+    setClip(c);
+  }, []);
+
   // ------------------------------------------------------------------------------------------
   // Feedback
 
@@ -123,25 +141,25 @@ export function App() {
   );
 
   const select = useCallback((s: Selection, scrollTo: Coord | null = s.focus) => {
-    setSel(s);
+    setSelNow(s);
     if (scrollTo) gridRef.current?.scrollIntoView(scrollTo);
-  }, []);
+  }, [setSelNow]);
 
   // ------------------------------------------------------------------------------------------
   // Opening documents
 
   const openDoc = useCallback(
     (doc: SheetDoc, start: string | null) => {
-      setEditing(null);
-      setClip(null);
+      setEditingNow(null);
+      setClipNow(null);
       const report = wb.load(doc);
       const c = (start && parseAddress(start)) || { row: 0, col: 0 };
-      setSel(at(c.row, c.col));
+      setSelNow(at(c.row, c.col));
       requestAnimationFrame(() => gridRef.current?.scrollIntoView(c));
       startRipple(report);
       return report;
     },
-    [wb, startRipple],
+    [wb, startRipple, setSelNow, setEditingNow, setClipNow],
   );
 
   const openExample = useCallback(
@@ -237,11 +255,11 @@ export function App() {
       const { row, col } = live.current.sel.anchor;
       const t = text ?? wb.sheet.raw(toKey(row, col));
       pendingCaret.current = t.length;
-      setEditing({ row, col, text: t, caret: t.length, mode, source, point: null });
+      setEditingNow({ row, col, text: t, caret: t.length, mode, source, point: null });
       setAssistIndex(0);
       setHint(null);
     },
-    [wb],
+    [wb, setEditingNow],
   );
 
   const editKey = editing ? `${editing.row},${editing.col},${editing.source}` : '';
@@ -268,19 +286,19 @@ export function App() {
       if (!e) return;
       const text = autoClose(e.text);
       const next = move ? clampCoord(e.row + move[0], e.col + move[1]) : { row: e.row, col: e.col };
-      setEditing(null);
+      setEditingNow(null);
       const change = wb.apply([[toKey(e.row, e.col), text]], `Changing ${addr(e.row, e.col)}`, live.current.sel, at(next.row, next.col));
       afterChange(change);
       select(at(next.row, next.col));
       gridRef.current?.focus();
     },
-    [wb, afterChange, select],
+    [wb, afterChange, select, setEditingNow],
   );
 
   const cancel = useCallback(() => {
-    setEditing(null);
+    setEditingNow(null);
     gridRef.current?.focus();
-  }, []);
+  }, [setEditingNow]);
 
   const completion = editing ? completionAt(editing.text, editing.caret) : null;
   const call = editing && !completion ? activeCall(editing.text, editing.caret) : null;
@@ -292,13 +310,13 @@ export function App() {
     const text = e.text.slice(0, c.start) + fn.name + '(' + e.text.slice(e.caret);
     const caret = c.start + fn.name.length + 1;
     pendingCaret.current = caret;
-    setEditing({ ...e, text, caret, point: null, mode: 'edit' });
+    setEditingNow({ ...e, text, caret, point: null, mode: 'edit' });
     setAssistIndex(0);
   };
 
   const insertPoint = (a: Coord, b: Coord): void => {
     const label = a.row === b.row && a.col === b.col ? addr(a.row, a.col) : rangeLabel(normalize(a, b));
-    setEditing((e) => {
+    setEditingNow((e) => {
       if (!e) return e;
       const reuse = e.point !== null && e.caret === e.point.end;
       const start = reuse ? e.point!.start : e.caret;
@@ -340,7 +358,7 @@ export function App() {
         return;
       case 'F2':
         ev.preventDefault();
-        setEditing({ ...e, mode: e.mode === 'enter' ? 'edit' : 'enter' });
+        setEditingNow({ ...e, mode: e.mode === 'enter' ? 'edit' : 'enter' });
         return;
     }
     const dirs: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
@@ -373,7 +391,7 @@ export function App() {
     const focus = { row: a.row === target.r1 ? target.r2 : target.r1, col: a.col === target.c1 ? target.c2 : target.c1 };
     const next = { anchor: a, focus };
     afterChange(wb.apply(fillWrites(wb.sheet, source, target, series), label, s, next));
-    setSel(next);
+    setSelNow(next);
   };
 
   const fillDirection = (down: boolean): void => {
@@ -394,7 +412,7 @@ export function App() {
       return null;
     }
     const c = copyClip(wb.sheet, r, cut);
-    setClip(c);
+    setClipNow(c);
     return c;
   };
 
@@ -411,7 +429,7 @@ export function App() {
         // Moving: clear the source first; the pasted cells then overwrite any overlap.
         const clears = clearWrites(wb.sheet, c.r);
         writes = [...clears, ...writes];
-        setClip(null);
+        setClipNow(null);
       }
       label = c.cut ? `Moving ${rangeLabel(c.r)} to ${rangeLabel(area)}` : `Pasting into ${rangeLabel(area)}`;
     } else if (text) {
@@ -425,7 +443,7 @@ export function App() {
     } else return;
     const next = { anchor: { row: area.r1, col: area.c1 }, focus: { row: area.r2, col: area.c2 } };
     afterChange(wb.apply(writes, label, s, next));
-    setSel(next);
+    setSelNow(next);
   };
 
   const structural = (kind: StructuralOp['kind'], axis: StructuralOp['axis']): void => {
@@ -435,7 +453,7 @@ export function App() {
     if ((axis === 'row' && isFullCols(r)) || (axis === 'col' && isFullRows(r))) return;
     const what = axis === 'row' ? (op.count === 1 ? `row ${op.at + 1}` : `rows ${op.at + 1}–${op.at + op.count}`) : op.count === 1 ? `column ${colName(op.at)}` : `columns ${colName(op.at)}–${colName(op.at + op.count - 1)}`;
     const label = kind === 'insert' ? `Inserting ${plural(op.count, axis === 'row' ? 'row' : 'column')} at ${what.split(' ')[1]}` : `Deleting ${what}`;
-    setClip(null);
+    setClipNow(null);
     afterChange(wb.structural(op, label, s));
     say(`${label}: references across the sheet were rewritten`);
   };
@@ -485,7 +503,19 @@ export function App() {
   }, []);
 
   const onGridKey = (e: KeyboardEvent<HTMLDivElement>): void => {
-    if (live.current.editing) return;
+    if (live.current.editing) {
+      // The editor has not taken focus yet: keep the character instead of dropping it.
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setEditingNow((ed) => {
+          if (!ed) return ed;
+          const text = ed.text.slice(0, ed.caret) + e.key + ed.text.slice(ed.caret);
+          pendingCaret.current = ed.caret + 1;
+          return { ...ed, text, caret: ed.caret + 1, point: null };
+        });
+      }
+      return;
+    }
     const mod = e.ctrlKey || e.metaKey;
     const s = live.current.sel;
     const dirs: Record<string, [number, number]> = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
@@ -525,7 +555,7 @@ export function App() {
         handled();
         return clearSelection();
       case 'Escape':
-        setClip(null);
+        setClipNow(null);
         return;
     }
     if (mod) {
@@ -577,7 +607,7 @@ export function App() {
       }
       commit(null);
     }
-    setSel((s) => (shift ? { anchor: s.anchor, focus: c } : at(c.row, c.col)));
+    setSelNow((s) => (shift ? { anchor: s.anchor, focus: c } : at(c.row, c.col)));
     return false;
   };
 
@@ -587,20 +617,20 @@ export function App() {
       if (p) insertPoint(p.anchor, c);
       return;
     }
-    setSel((s) => (s.focus.row === c.row && s.focus.col === c.col ? s : { anchor: s.anchor, focus: c }));
+    setSelNow((s) => (s.focus.row === c.row && s.focus.col === c.col ? s : { anchor: s.anchor, focus: c }));
   };
 
   const onHeaderDown = (kind: HeaderKind, index: number, shift: boolean): void => {
     if (live.current.editing) commit(null);
     if (kind === 'all') return select({ anchor: { row: 0, col: 0 }, focus: { row: MAX_ROWS - 1, col: MAX_COLS - 1 } }, null);
-    setSel((s) => {
+    setSelNow((s) => {
       if (kind === 'col') return { anchor: { row: 0, col: shift ? s.anchor.col : index }, focus: { row: MAX_ROWS - 1, col: index } };
       return { anchor: { row: shift ? s.anchor.row : index, col: 0 }, focus: { row: index, col: MAX_COLS - 1 } };
     });
   };
 
   const onHeaderDrag = (kind: HeaderKind, index: number): void => {
-    setSel((s) => (kind === 'col' ? { anchor: s.anchor, focus: { row: MAX_ROWS - 1, col: index } } : { anchor: s.anchor, focus: { row: index, col: MAX_COLS - 1 } }));
+    setSelNow((s) => (kind === 'col' ? { anchor: s.anchor, focus: { row: MAX_ROWS - 1, col: index } } : { anchor: s.anchor, focus: { row: index, col: MAX_COLS - 1 } }));
   };
 
   const onContextMenu = (x: number, y: number, target: { kind: 'cell'; c: Coord } | { kind: HeaderKind; index: number }): void => {
@@ -615,8 +645,7 @@ export function App() {
     } else if (target.kind === 'row') {
       if (!(isFullRows(r0) && target.index >= r0.r1 && target.index <= r0.r2)) s = { anchor: { row: target.index, col: 0 }, focus: { row: target.index, col: MAX_COLS - 1 } };
     }
-    setSel(s);
-    live.current.sel = s;
+    setSelNow(s);
     const r = selRange(s);
     const rows = r.r2 - r.r1 + 1;
     const cols = r.c2 - r.c1 + 1;
@@ -744,10 +773,10 @@ export function App() {
         label={`Editing ${addr(editing.row, editing.col)}`}
         className="fi-cell"
         onChange={(text, caret) => {
-          setEditing((e) => e && { ...e, text, caret, point: null });
+          setEditingNow((e) => e && { ...e, text, caret, point: null });
           setAssistIndex(0);
         }}
-        onCaret={(caret) => setEditing((e) => (e && e.caret !== caret ? { ...e, caret, point: e.point && caret === e.point.end ? e.point : null } : e))}
+        onCaret={(caret) => setEditingNow((e) => (e && e.caret !== caret ? { ...e, caret, point: e.point && caret === e.point.end ? e.point : null } : e))}
         onKeyDown={onEditKey}
       />
     ) : (
@@ -825,13 +854,13 @@ export function App() {
           value={editing ? editing.text : activeRaw}
           onFocus={() => {
             if (!live.current.editing) beginEdit(null, 'edit', 'bar');
-            else if (live.current.editing.source === 'cell') setEditing((e) => e && { ...e, source: 'bar' });
+            else if (live.current.editing.source === 'cell') setEditingNow((e) => e && { ...e, source: 'bar' });
           }}
           onChange={(text, caret) => {
-            setEditing((e) => (e ? { ...e, text, caret, point: null } : e));
+            setEditingNow((e) => (e ? { ...e, text, caret, point: null } : e));
             setAssistIndex(0);
           }}
-          onCaret={(caret) => setEditing((e) => (e && e.caret !== caret ? { ...e, caret, point: e.point && caret === e.point.end ? e.point : null } : e))}
+          onCaret={(caret) => setEditingNow((e) => (e && e.caret !== caret ? { ...e, caret, point: e.point && caret === e.point.end ? e.point : null } : e))}
           onKeyDown={onEditKey}
         />
       </div>
@@ -859,7 +888,6 @@ export function App() {
           onFill={(t) => fill(range, t, true, `Filling ${rangeLabel(t)}`)}
           onDoubleClick={(c) => {
             select(at(c.row, c.col));
-            live.current.sel = at(c.row, c.col);
             beginEdit(null, 'edit', 'cell');
           }}
           onContextMenu={onContextMenu}

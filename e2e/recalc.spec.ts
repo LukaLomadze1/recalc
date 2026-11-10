@@ -25,6 +25,9 @@ async function blank(page: Page): Promise<void> {
 async function goto(page: Page, a1: string): Promise<void> {
   await page.locator('.name-box').fill(a1);
   await page.locator('.name-box').press('Enter');
+  // Wait until the app has actually moved there and the grid has the keyboard.
+  await expect(page.locator('.name-box')).toHaveValue(a1);
+  await expect(page.locator('.grid-scroller')).toBeFocused();
 }
 
 async function valueOf(page: Page, a1: string): Promise<string> {
